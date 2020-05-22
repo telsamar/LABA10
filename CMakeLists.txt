@@ -25,7 +25,8 @@ string(APPEND CMAKE_CXX_FLAGS " -pedantic -Werror -Wall -Wextra")
 string(APPEND CMAKE_CXX_FLAGS " -Wno-unused-command-line-argument")
 string(APPEND CMAKE_CXX_FLAGS " -Wshadow -Wnon-virtual-dtor")
 
-
+hunter_add_package(GTest)
+find_package(GTest CONFIG REQUIRED)
 hunter_add_package(Boost
         COMPONENTS
         program_options
@@ -69,7 +70,7 @@ target_include_directories(tests
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
         )
 # TODO: change template word to project name and delete this comment
-target_link_libraries(tests template)
+target_link_libraries(tests GTest::main template)
 
 target_include_directories(
         header
