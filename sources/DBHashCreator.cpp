@@ -16,7 +16,7 @@ FHandlerContainer DBHashCreator::openDB
                     descriptors,
                     &newHandles,
                     &dbStrPtr);
-    if(!status.ok()) std::cerr << status.ToString() << std::endl; //if 0 -> exit
+    if (!status.ok()) std::cerr << status.ToString() << std::endl; //if 0 -> exit
 
     _db.reset(dbStrPtr);
 
@@ -36,7 +36,7 @@ FDescriptorContainer DBHashCreator::getFamilyDescriptors() {
             rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(),
                                             _path,
                                             &family);
-  if(!status.ok()) std::cerr << status.ToString() << std::endl; //if 0 -> exit
+  if (!status.ok()) std::cerr << status.ToString() << std::endl; //if 0 -> exit
 
     for (const std::string &familyName : family) {
         descriptors.emplace_back(familyName,
@@ -67,7 +67,7 @@ void DBHashCreator::getHash
                                           family,
                                           it->first,
                                           hash);
-      if(!status.ok()) std::cerr << status.ToString() << std::endl;
+      if (!status.ok()) std::cerr << status.ToString() << std::endl;
     }
 }
 
