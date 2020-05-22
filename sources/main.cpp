@@ -1,5 +1,5 @@
-﻿// Copyright 2020 <telsamar>
-#include <DBHashCreator.hpp>
+// Copyright 2018 Your Name <your_email>
+#include <main.hpp>
 #include <constants.hpp>
 #include <logs.hpp>
 
@@ -32,9 +32,10 @@ int main(int argc, char **argv) {
     if (!vm.count("log_level")
         || !vm.count("thread_count")
         || !vm.count("output")) {
-      std::cout << "error: bad format" << std::endl << desc << std::endl;
-      return 1;
+        std::cout << "error: bad format" << std::endl << desc << std::endl;
+        return 1;
     }
+
     std::string logLVL = vm["log_level"].as<std::string>();
     std::size_t threadCount = vm["thread_count"].as<unsigned>();
     std::string pathToFile = vm["output"].as<std::string>();
