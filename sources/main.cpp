@@ -1,79 +1,126 @@
-// Copyright 2018 Your Name <your_email>
+// Copyright 2020 <boikov3>
+#include <DBHashCreator.hpp>
+#include <constants.hpp>
+#include <logs.hpp>
 
-#include <boost/asio.hpp>
+int main(int argc, char **argv) {
+    po::options_description desc("short description");
+    desc.add_options()
+            ("help,h", "0 помощи")
+            ("log_level", po::value<std::string>(),
+             "level logging")
+            ("thread_count", po::value<unsigned>(),
+             "count of threads")
+            ("output", po::value<std::string>(),
+             "path result");
 
-#include "LogSetup.h"
-#include "Settings.h"
-#include "Utils.h"
-#include "DbActions.h"
-
-int main(int argc, char *argv[])
-{
-    if (auto returnCode = programArguments(argc, argv); returnCode != 0) {
-        return returnCode;
+    po::variables_map vm;
+    try {
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
     }
 
-    LogSetup::init();
-
-    BOOST_LOG_TRIVIAL(debug) << "Log setup complete";
-    BOOST_LOG_TRIVIAL(info) << "Input: " << Settings::input
-                            << "\nOutput: " << Settings::output
-                            << "\nThreads: " << Settings::threadAmount
-                            << "\nLogLevel: " << Settings::logLevel;
-
-    if (Settings::writeOnly) {
-        BOOST_LOG_TRIVIAL(info) << "Creating random db...";
-
-        DbActions actions{Settings::input};
-        actions.create();
-        actions.randomFill();
-
-        return 0;
+    catch (po::error &e) {
+        std::cout << e.what() << std::endl;
+        std::cout << desc << std::endl;
+        return 1;
     }
-
-    removeDirectoryIfExists(Settings::output);
-    copyDirectory(Settings::input, Settings::output);
-
-    DbActions actions{Settings::output};
-
-    boost::asio::thread_pool pool(Settings::threadAmount);
-
-    auto descriptors = actions.getFamilyDescriptorList();
-    auto handlers = actions.open(descriptors);
-
-    std::list<DbActions::RowContainer> cachedRows;
-    for (auto &family : handlers) {
-        cachedRows.push_back(
-            actions.getRows(family.get()));
-        auto &rows = cachedRows.back();
-
-        size_t counter = 0;
-        auto beginIterator = rows.cbegin();
-        for (auto it = rows.cbegin(); it != rows.cend(); ++it) {
-            counter++;
-
-            static const size_t COUNTER_PER_THREAD = 4;
-            if (counter != 0 && counter % COUNTER_PER_THREAD == 0) {
-                boost::asio::post(pool,
-                                  [&actions, &family, beginIterator, it]() {
-                                      actions.hashRows(family.get(),
-                                                       beginIterator,
-                                                       it);
-                                  });
-
-                beginIterator = it;
-            }
-        }
-
-        if (beginIterator != rows.cend()) {
-            boost::asio::post(pool,
-                              [&actions, &family, beginIterator, &rows]() {
-                                  actions.hashRows(family.get(),
-                                                   beginIterator,
-                                                   rows.cend());
-                              });
-        }
+    if (vm.count("help")) {
+        std::cout << desc << std::endl;
+        return 1;
     }
-
-    pool.join();
+    if (!vm.count("log_level")
+        || !vm.count("thread_count")
+        || !vm.count("output")) {
+      std::cout << "error: bad format" << std::endl << desc << std::endl;
+      return 1;
+    }
+    std::string logLVL = vm["log_level"].as<std::string>();
+    std::size_t threadCount = vm["thread_count"].as<unsigned>();
+    std::string pathToFile = vm["output"].as<std::string>();
+    //std::cout << logLVL << " " << threadCount << " " << pathToFile;
+    logs::logInFile();
+    DBHashCreator db(pathToFile, threadCount, logLVL);
+    db.startThreads();
+    return 0;
 }
+/*
+#include <cstdio>
+#include <iostream>
+#include <string>
+
+#include "rocksdb/db.h"
+#include "rocksdb/options.h"
+#include "rocksdb/slice.h"
+
+std::string kDBPath = "/home/ivan/rocksdb_simple_example";
+
+int main() {
+  rocksdb::DB* db;
+  rocksdb::Options options;
+  // Optimize RocksDB. This is the easiest way to get RocksDB to perform well
+  //options.IncreaseParallelism();
+  //options.OptimizeLevelStyleCompaction();
+  // create the DB if it's not already present
+  options.create_if_missing = true;
+
+  // open DB
+  rocksdb::Status s = rocksdb::DB::Open(options, kDBPath, &db);
+  if(!s.ok()) std::cerr << s.ToString() << std::endl;
+
+  // Put key-value
+  s = db->Put(rocksdb::WriteOptions(), "key1", "value");
+  assert(s.ok());
+  std::string value;
+  // get value
+  s = db->Get(rocksdb::ReadOptions(), "key1", &value);
+  assert(s.ok());
+  std::cout << value;
+  assert(value == "value");
+
+  // atomically apply a set of updates
+  {
+    rocksdb::WriteBatch batch;
+    batch.Delete("key1");
+    batch.Put("key2", value);
+    s = db->Write(rocksdb::WriteOptions(), &batch);
+  }
+
+  s = db->Get(rocksdb::ReadOptions(), "key1", &value);
+  assert(s.IsNotFound());
+
+  db->Get(rocksdb::ReadOptions(), "key2", &value);
+  assert(value == "value");
+
+  {
+    rocksdb::PinnableSlice pinnable_val;
+    db->Get(rocksdb::ReadOptions(), db->DefaultColumnFamily(), "key2", &pinnable_val);
+    assert(pinnable_val == "value");
+  }
+
+  {
+    std::string string_val;
+    // If it cannot pin the value, it copies the value to its internal buffer.
+    // The intenral buffer could be set during construction.
+    rocksdb::PinnableSlice pinnable_val(&string_val);
+    db->Get(rocksdb::ReadOptions(), db->DefaultColumnFamily(), "key2", &pinnable_val);
+    assert(pinnable_val == "value");
+    // If the value is not pinned, the internal buffer must have the value.
+    assert(pinnable_val.IsPinned() || string_val == "value");
+  }
+
+  rocksdb::PinnableSlice pinnable_val;
+  db->Get(rocksdb::ReadOptions(), db->DefaultColumnFamily(), "key1", &pinnable_val);
+  assert(s.IsNotFound());
+  // Reset PinnableSlice after each use and before each reuse
+  pinnable_val.Reset();
+  db->Get(rocksdb::ReadOptions(), db->DefaultColumnFamily(), "key2", &pinnable_val);
+  assert(pinnable_val == "value");
+  pinnable_val.Reset();
+  // The Slice pointed by pinnable_val is not valid after this point
+
+  delete db;
+
+  return 0;
+}
+ */
