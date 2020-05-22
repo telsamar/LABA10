@@ -1,6 +1,6 @@
 // Copyright 2018 Your Name <your_email>
 
-#include <main.hpp>
+#include <DBHashCreator.hpp>
 #include <logs.hpp>
 
 namespace logging = boost::log;

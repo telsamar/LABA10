@@ -1,6 +1,6 @@
 // Copyright 2018 Your Name <your_email>
 
-#ifndef INCLUDE_MAIN_HPP_
+#pragma once
 #define INCLUDE_MAIN_HPP_
 #include <iostream>
 #include <string>
@@ -37,7 +37,9 @@ public:
             std::size_t threadCount,
             std::string logLVL) :
             _path(path),
-            _logLVL(logLVL),  _threadCountHash(threadCount){}
+            _logLVL(logLVL),  _threadCountHash(threadCount){
+      options.create_if_missing = true;
+    }
 
     FDescriptorContainer getFamilyDescriptors();
 
@@ -52,10 +54,11 @@ public:
     void startThreads();
 
 private:
+    rocksdb::DBOptions options;
     std::string _path;
     std::string _logLVL;
     std::unique_ptr<rocksdb::DB> _db;
     std::size_t _threadCountHash = DEFAULT_THREAD_HASH;
     std::mutex _mutex;
 };
-#endif // INCLUDE_MAIN_HPP_
+

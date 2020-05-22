@@ -1,5 +1,5 @@
-// Copyright 2018 Your Name <your_email>
-#include <main.hpp>
+// Copyright 2020 <telsamar>
+#include <DBHashCreator.hpp>
 #include <constants.hpp>
 #include <logs.hpp>
 
@@ -11,13 +11,15 @@ FHandlerContainer DBHashCreator::openDB
 
     rocksdb::Status status =
             rocksdb::DB::Open(
-                    rocksdb::DBOptions(),
+                    options,
                     _path,
                     descriptors,
                     &newHandles,
                     &dbStrPtr);
-    if (!status.ok()) std::cerr << status.ToString() << std::endl; //if 0 -> exit
-
+    if (!status.ok()) std::cerr << status.ToString() << std::endl;
+    status = dbStrPtr->Put(rocksdb::WriteOptions(), "key1", "value1");
+    status = dbStrPtr->Put(rocksdb::WriteOptions(), "key2", "value2");
+  status = dbStrPtr->Put(rocksdb::WriteOptions(), "key3", "value3");
     _db.reset(dbStrPtr);
 
     for (rocksdb::ColumnFamilyHandle *ptr : newHandles) {
@@ -28,15 +30,13 @@ FHandlerContainer DBHashCreator::openDB
 }
 
 FDescriptorContainer DBHashCreator::getFamilyDescriptors() {
-    rocksdb::Options options;
-
     std::vector <std::string> family;
     FDescriptorContainer descriptors;
     rocksdb::Status status =
-            rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(),
+            rocksdb::DB::ListColumnFamilies(options,
                                             _path,
                                             &family);
-  if (!status.ok()) std::cerr << status.ToString() << std::endl; //if 0 -> exit
+  if (!status.ok()) std::cerr << status.ToString() << std::endl;
 
     for (const std::string &familyName : family) {
         descriptors.emplace_back(familyName,
@@ -59,14 +59,17 @@ StrContainer DBHashCreator::getStrs(rocksdb::ColumnFamilyHandle *family) {
 
 void DBHashCreator::getHash
         (rocksdb::ColumnFamilyHandle *family, StrContainer strContainer) {
+  std::string value;
     for (auto it = strContainer.begin(); it != strContainer.end(); ++it) {
         std::string hash = picosha2::hash256_hex_string(it->first + it->second);
-        std::cout << "key: " << it->first << " hash: " << hash << std::endl;
-        logs::logInfo(it->first, hash);
+        //logs::logInfo(it->first, hash);
         rocksdb::Status status = _db->Put(rocksdb::WriteOptions(),
                                           family,
                                           it->first,
                                           hash);
+      status = _db->Get(rocksdb::ReadOptions(), it->first, &value);
+      std::cout << "key: " << it->first << " hash: " << hash << " = " << value
+      << std::endl;
       if (!status.ok()) std::cerr << status.ToString() << std::endl;
     }
 }
