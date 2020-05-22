@@ -1,4 +1,4 @@
-// Copyright 2020 <boikov3>
+// Copyright 2020 <telsamar>
 #include <DBHashCreator.hpp>
 #include <constants.hpp>
 #include <logs.hpp>
@@ -16,7 +16,7 @@ FHandlerContainer DBHashCreator::openDB
                     descriptors,
                     &newHandles,
                     &dbStrPtr);
-    if(!status.ok()) std::cerr << status.ToString() << std::endl;
+    if (!status.ok()) std::cerr << status.ToString() << std::endl;
     status = dbStrPtr->Put(rocksdb::WriteOptions(), "key1", "value1");
     status = dbStrPtr->Put(rocksdb::WriteOptions(), "key2", "value2");
   status = dbStrPtr->Put(rocksdb::WriteOptions(), "key3", "value3");
@@ -30,14 +30,13 @@ FHandlerContainer DBHashCreator::openDB
 }
 
 FDescriptorContainer DBHashCreator::getFamilyDescriptors() {
-
     std::vector <std::string> family;
     FDescriptorContainer descriptors;
     rocksdb::Status status =
             rocksdb::DB::ListColumnFamilies(options,
                                             _path,
                                             &family);
-  if(!status.ok()) std::cerr << status.ToString() << std::endl;
+  if (!status.ok()) std::cerr << status.ToString() << std::endl;
 
     for (const std::string &familyName : family) {
         descriptors.emplace_back(familyName,
@@ -69,8 +68,9 @@ void DBHashCreator::getHash
                                           it->first,
                                           hash);
       status = _db->Get(rocksdb::ReadOptions(), it->first, &value);
-      std::cout << "key: " << it->first << " hash: " << hash << " = " << value << std::endl;
-      if(!status.ok()) std::cerr << status.ToString() << std::endl;
+      std::cout << "key: " << it->first << " hash: " << hash << " = " << value
+      << std::endl;
+      if (!status.ok()) std::cerr << status.ToString() << std::endl;
     }
 }
 

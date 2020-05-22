@@ -1,6 +1,6 @@
 // Copyright 2018 Your Name <your_email>
 
-#ifndef INCLUDE_MAIN_HPP_
+#pragma once
 #define INCLUDE_MAIN_HPP_
 #include <iostream>
 #include <string>
@@ -61,4 +61,4 @@ private:
     std::size_t _threadCountHash = DEFAULT_THREAD_HASH;
     std::mutex _mutex;
 };
-#endif // INCLUDE_MAIN_HPP_
+
